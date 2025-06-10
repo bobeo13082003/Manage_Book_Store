@@ -3,10 +3,9 @@ const Users = require('../../models/user');
 const { hashPassword } = require('../../utils/bcryptHelper');
 const generalOtp = require('../../utils/generateOtp')
 const sendEmail = require('../../utils/sendEmail')
-const { cloudinary } = require('../../middleware/upload.middleware')
+// const { cloudinary } = require('../../middleware/upload.middleware')
 var jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const Users = require('../../models/user');
 var jwt = require('jsonwebtoken');
 const { comparePassword } = require('../../utils/bcryptHelper');
 

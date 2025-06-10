@@ -2,9 +2,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
-const connectDb = require('./config/db')
+const connectDb = require('./src/config/db')
 
-// const userRouter = require('./routers/user/index')
+const userRouter = require('./src/routers/user/index')
 // const authRouter = require('./routers/Auth/index')
 
 require('dotenv').config();
@@ -19,7 +19,7 @@ app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// userRouter(app) 
+userRouter(app)
 // authRouter(app)
 
 const PORT = process.env.PORT || 9999;
