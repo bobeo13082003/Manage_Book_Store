@@ -3,28 +3,69 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, ArrowLeft, Check, User, Mail, Lock, Sparkles, Shield, Star } from "lucide-react"
+import { toast } from "react-toastify"
+import { customerRegister } from "../services/Customer/ApiAuth"
 
 const Register = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [formData, setFormData] = useState({
-        fullName: "",
+        username: "",
         email: "",
         password: "",
-        confirmPassword: "",
-        agreeTerms: false
     })
+    const navigate = useNavigate()
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
-    const handleRegister = (e) => {
+
+    const isValidEmail = (email) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    };
+
+    const handleRegister = async (e) => {
         e.preventDefault()
-        console.log("Register attempt:", formData)
-        // Handle registration logic here
+        try {
+            if (!formData.username) {
+                return toast.error("Tên Tài Khoản Không Để Trống")
+            }
+            if (!formData.email) {
+                return toast.error("Email Không Để Trống")
+            }
+            if (!formData.password) {
+                return toast.error("Mật Khẩu Không Để Trống")
+            }
+            if (!formData.confirmPassword) {
+                return toast.error("Mật Khẩu Xác Nhận Không Để Trống")
+            }
+            if (!isValidEmail(formData.email)) {
+                toast.error("Email Không Đúng Định Dạng")
+            }
+            if (formData.password.length < 6) {
+                return toast.error("Mật Khẩu Phải Hơn 6 Ký Tự")
+            }
+            if (formData.password !== formData.confirmPassword) {
+                return toast.error("Xác Nhận Mật Khẩu Không Khớp")
+            }
+            const res = await customerRegister(formData.username, formData.email, formData.password);
+            console.log(res);
+
+            if (res.data && res.data.code === 201) {
+                toast.success("Đăng Ký Tài Khoản Thành Công");
+                navigate(`/verify/${formData.email}`)
+            } else if (res.data && res.data.code === 400) {
+                toast.error(res.data?.message === "Email already exits" ? "Email Đã Tồn Tại" : "Tên Tài Khoản Đã Tồn Tại")
+            } else {
+                toast.error("Đăng Ký Thất Bại")
+            }
+        } catch (error) {
+            console.log("Server error", error);
+        }
     }
 
     const passwordRequirements = [
@@ -62,15 +103,15 @@ const Register = () => {
                     <CardContent className="space-y-6 px-8 pb-8">
                         <form onSubmit={handleRegister} className="space-y-6">
                             <div className="space-y-3">
-                                <Label htmlFor="fullName" className="text-white font-medium">Họ và tên</Label>
+                                <Label htmlFor="username" className="text-white font-medium">Tên tài khoản</Label>
                                 <div className="relative group">
                                     <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 w-5 h-5 group-focus-within:text-purple-400 transition-colors" />
                                     <Input
-                                        id="fullName"
+                                        id="username"
                                         type="text"
-                                        placeholder="Nhập họ và tên"
-                                        value={formData.fullName}
-                                        onChange={(e) => handleInputChange("fullName", e.target.value)}
+                                        placeholder="Nhập tên tài khoản"
+                                        value={formData.username}
+                                        onChange={(e) => handleInputChange("username", e.target.value)}
                                         className="pl-12 h-12 border-0 bg-white/10 text-white placeholder-white/50 focus:bg-white/20 focus:ring-2 focus:ring-purple-400 transition-all backdrop-blur-sm"
                                         required
                                     />
@@ -174,23 +215,11 @@ const Register = () => {
                                 )}
                             </div>
 
-                            <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-lg backdrop-blur-sm">
-                                <Label htmlFor="agreeTerms" className="text-white/90 text-sm leading-6">
-                                    Tôi đồng ý với{" "}
-                                    <Link to="/terms" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">
-                                        Điều khoản sử dụng
-                                    </Link>{" "}
-                                    và{" "}
-                                    <Link to="/privacy" className="text-purple-300 hover:text-purple-200 font-semibold transition-colors">
-                                        Chính sách bảo mật
-                                    </Link>
-                                </Label>
-                            </div>
 
                             <Button
                                 type="submit"
                                 className="w-full h-14 text-base font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                                disabled={!formData.agreeTerms || formData.password !== formData.confirmPassword}
+                                disabled={formData.password !== formData.confirmPassword}
                             >
                                 <Star className="w-5 h-5 mr-2" />
                                 Tạo tài khoản

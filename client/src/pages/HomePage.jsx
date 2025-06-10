@@ -62,7 +62,7 @@ const HomePage = () => {
     ]
 
     return (
-        <CustomerLayout>
+        <>
             {/* Hero Section với hiệu ứng gradient và animation */}
             <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
                 {/* Animated background elements */}
@@ -322,7 +322,7 @@ const HomePage = () => {
                     </div>
                 </div>
             </section>
-        </CustomerLayout>
+        </>
     );
 };
 

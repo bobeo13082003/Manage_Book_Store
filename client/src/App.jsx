@@ -4,17 +4,25 @@ import { BrowserRouter as Router, Routes, Route, Outlet, BrowserRouter } from 'r
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+const MainLayout = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
 
-// const MainLayout = () => {
-//   return (
-//     <div>
-//       <Header />
-//       <main>
-//         <Outlet /> {/* Đây là nơi các route con sẽ được render */}
-//       </main>
-//     </div>
-//   );
-// };
+      {/* Main content */}
+      <main>
+        <Outlet />
+      </main>
+
+      <Footer />
+    </div>
+
+  );
+};
 
 function App() {
 
@@ -22,7 +30,8 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<HomePage />}>
+          <Route path='/' element={<MainLayout />}>
+            <Route index element={<HomePage />} />
             {/* <Route path="/profile" element={<Profile />} />
             <Route path="/cart" element={<Cart />} /> */}
           </Route>
@@ -33,6 +42,7 @@ function App() {
           {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
           {/* <Route path="*" element={<NotFound />} /> */}
         </Routes>
+        <ToastContainer position="top-right" autoClose={5000} theme="light" />
       </BrowserRouter>
     </>
   )
