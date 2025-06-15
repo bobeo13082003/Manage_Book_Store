@@ -4,18 +4,69 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Eye, EyeOff, ArrowLeft, Mail, Lock, BookOpen, Sparkles, Shield, Star } from "lucide-react"
-
+import { customerLogin } from '../services/Customer/ApiAuth';
+import { toast } from 'react-toastify';
+import { useDispatch } from 'react-redux';
+import { login } from '../store/customer/authSlice';
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const isValidEmail = (email) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    };
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault()
-        console.log("Login attempt:", { email, password })
-        // Handle login logic here
+        try {
+            if (!email || !password) {
+                return toast.error("Email Hoặc Mật Khẩu Không Để Trống")
+            }
+            if (!isValidEmail(email)) {
+                return toast.error("Email Không Đúng Định Dạng")
+            }
+            const res = await customerLogin(email, password);
+            if (res.data && res.data.code === 200) {
+                const dataToken = {
+                    accessToken: res.data?.accessToken,
+                    refreshToken: res.data?.refreshToken
+                }
+                dispatch(login(dataToken))
+                toast.success("Đăng Nhập Thành Công")
+                navigate('/')
+            } else if (res.data) {
+                const status = res.data.code;
+                switch (status) {
+                    case 400:
+                        toast.error("Email Không Tồn Tại");
+                        break;
+                    case 403:
+                        toast.error("Mật Khẩu Không Đúng");
+                        break;
+                    case 402:
+                        toast.error("Tài Khoản Không Tồn Tại");
+                        break;
+                    case 401:
+                        toast.error("Tài Khoản Chưa Xác Thực");
+                        navigate(`/verify/${email}`);
+                        break;
+                    default:
+                        toast.error("Đăng Nhập Thất Bại");
+                        break;
+                }
+            } else {
+                toast.error("Không thể kết nối đến máy chủ");
+            }
+        } catch (error) {
+            toast.error("Không thể kết nối đến máy chủ");
+            console.log(error);
+
+        }
     }
     return (
         <div className="min-h-screen flex bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900">

@@ -8,6 +8,8 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import VerifyAccount from './pages/VerifyAccount';
+import LoadingVerify from './pages/LoadingVerify';
 const MainLayout = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -38,6 +40,8 @@ function App() {
 
           {/* Các route không dùng layout */}
           <Route path="/login" element={<Login />} />
+          <Route path="/verify/:email" element={<VerifyAccount />} />
+          <Route path="/verify-account/:email" element={<LoadingVerify />} />
           <Route path="/register" element={<Register />} />
           {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
           {/* <Route path="*" element={<NotFound />} /> */}
