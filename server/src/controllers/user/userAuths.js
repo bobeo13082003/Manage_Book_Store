@@ -5,65 +5,7 @@ const generalOtp = require('../../utils/generateOtp')
 const sendEmail = require('../../utils/sendEmail')
 // const { cloudinary } = require('../../middleware/upload.middleware')
 var jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-var jwt = require('jsonwebtoken');
-const { comparePassword } = require('../../utils/bcryptHelper');
 
-
-module.exports.login = async (req, res) => {
-    try {
-        const user = await Users.findOne({
-            email: req.body.email,
-        })
-        if (!user) {
-            return res.json({
-                code: 400,
-                message: "Email Not Correct"
-            })
-        }
-        const checkPass = await comparePassword(req.body.password, user.password);
-        if (!checkPass) {
-            return res.json({
-                code: 403,
-                message: "Password Not Correct"
-            })
-        }
-        if (user.status === "inactive" && user.role === 0) {
-            return res.json({
-                code: 401,
-                message: "Account Not Active Please Verify"
-            })
-        }
-        if (user.status === "inactive") {
-            return res.json({
-                code: 402,
-                message: "Account Not Active"
-            })
-        }
-
-
-        const dataToken = {
-            username: user.username,
-            email: user.email,
-            role: user.role
-        }
-        const accessToken = jwt.sign(dataToken, process.env.TOKEN_SECRET, { expiresIn: "15m" });
-        const refreshToken = jwt.sign(dataToken, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "7d" });
-        await Users.findByIdAndUpdate(
-            user._id,
-            { re_token: refreshToken },
-            { new: true }
-        );
-        res.json({
-            code: 200,
-            message: "Login successfully",
-            accessToken,
-            refreshToken,
-        })
-    } catch (error) {
-        res.status(500).json({ message: "Server Error", error: error.message });
-    }
-}
 module.exports.register = async (req, res) => {
     try {
         const { email, username } = req.body;
@@ -85,17 +27,8 @@ module.exports.register = async (req, res) => {
             code: 201,
             message: "Register successfully"
         })
-        const otp = generalOtp.generateOtp(6);
-        const objVrtify = {
-            email: email,
-            purpose: "verify-email",
-            otp: otp,
-            "expireAt": Date.now()
-        }
-        const vertifyEmail = new Otp(objVrtify);
-        await vertifyEmail.save();
 
-        const subject = "Your One-Time Password (OTP) for Account Verification";
+        const subject = "Your One-Time for Account Verification";
         const html = `
 <!DOCTYPE html>
 <html>
@@ -168,12 +101,10 @@ module.exports.register = async (req, res) => {
         <div class="email-body">
             <p>Dear User,</p>
             <p>To complete the verification process for your Book Store account, please use the following OTP:</p>
-            <h3 class="otp">${otp}</h3>
             <p>Or click the button below to verify your account:</p>
-            <a class="verify-button" href="http://http://localhost:5173/verify-email?email=${email}&otp=${otp}">
+            <a class="verify-button"href="http://localhost:5173/verify-account/${email}">
                 Verify Account
             </a>
-            <p>This OTP is valid for the next <strong>3 minutes</strong>. Please do not share it with anyone.</p>
             <p>If you did not request this, please ignore this email.</p>
             <p>Thank you,<br>The Book Store Team</p>
         </div>
@@ -194,23 +125,25 @@ module.exports.register = async (req, res) => {
 
 module.exports.vertifyAccount = async (req, res) => {
     try {
-        const { otp, email } = req.body;
+        const { email } = req.body;
 
-        const optCorrect = await Otp.findOne({
-            email: email,
-            otp: otp,
-            purpose: "verify-email"
+        const user = await Users.findOne({
+            email: email
         })
 
-        if (!optCorrect) {
-            return res.json({ code: 400, message: "OTP Not Correct" })
+        if (!user) {
+            return res.json({
+                code: 402,
+                message: "User not found"
+            })
         }
+
         await Users.updateOne({
             email: email
         }, {
             status: "active"
         })
-        await Otp.deleteOne({ _id: optCorrect._id });
+
         res.json({
             code: 200,
             message: "Vertify Successfully"
@@ -239,16 +172,8 @@ module.exports.resendOtp = async (req, res) => {
                 message: "Account is Vertify"
             })
         }
-        const otp = generalOtp.generateOtp(6);
-        const objVrtify = {
-            email: email,
-            otp: otp,
-            purpose: "verify-email",
-            "expireAt": Date.now()
-        }
-        const vertifyEmail = new Otp(objVrtify);
-        await vertifyEmail.save();
-        const subject = "Your One-Time Password (OTP) for Account Verification";
+
+        const subject = "Your One-Time for Account Verification";
         const html = `
 <!DOCTYPE html>
 <html>
@@ -301,20 +226,31 @@ module.exports.resendOtp = async (req, res) => {
             display: inline-block;
             margin: 10px 0;
         }
+        .verify-button {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #4caf50;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="email-container">
         <div class="email-header">
-            Book Store – Account Verification
+            Account Verification - Book Store
         </div>
         <div class="email-body">
             <p>Dear User,</p>
-            <p>We received a request to resend your One-Time Password (OTP) for verifying your Book Store account.</p>
-            <p>Your OTP is:</p>
-            <h3 class="otp">${otp}</h3>
-            <p>This OTP is valid for the next <strong>3 minutes</strong>. Please do not share this code with anyone.</p>
-            <p>If you did not request this OTP, you can safely ignore this email.</p>
+            <p>To complete the verification process for your Book Store account, please use the following OTP:</p>
+            <p>Or click the button below to verify your account:</p>
+            <a class="verify-button" href="http://http://localhost:5173/verify-account/${email}">
+                Verify Account
+            </a>
+            <p>If you did not request this, please ignore this email.</p>
             <p>Thank you,<br>The Book Store Team</p>
         </div>
         <div class="email-footer">
@@ -358,7 +294,7 @@ module.exports.forgot = async (req, res) => {
         }
         const vertifyEmail = new Otp(objVrtify);
         await vertifyEmail.save();
-        const subject = "Your One-Time Password (OTP) for Account Verification";
+        const subject = "Your One-Time for Account Verification";
         const html = `
 <!DOCTYPE html>
 <html>
