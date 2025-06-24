@@ -39,3 +39,15 @@ export const getProfile = () => {
 export const updateProfile = (formData) => {
     return instance.post('/user/auth/profile', formData)
 }
+
+export const forgot = (email) => {
+    return instance.post('/user/auth/forgot-password', { email })
+}
+export const otpForgot = (otp, email) => {
+    return instance.post('/user/auth/otp-forgot', { otp, email })
+}
+export const reset = (email, password) => {
+    return instance.post('/user/auth/reset-password', { password, email })
+}
+
+
