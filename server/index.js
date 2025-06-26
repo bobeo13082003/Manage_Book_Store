@@ -6,6 +6,7 @@ const connectDb = require('./src/config/db')
 
 const userRouter = require('./src/routers/user/index')
 const authRouter = require('./src/routers/auth/index')
+const adminRouter = require('./src/routers/admin/index')
 
 require('dotenv').config();
 
@@ -21,6 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 userRouter(app)
 authRouter(app)
+adminRouter(app)
 
 const PORT = process.env.PORT || 9999;
 app.listen(PORT, () => {

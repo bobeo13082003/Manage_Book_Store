@@ -275,6 +275,7 @@ module.exports.resendOtp = async (req, res) => {
 module.exports.forgot = async (req, res) => {
     try {
         const { email } = req.body;
+
         const user = await Users.findOne({
             email: email,
             status: "active"
