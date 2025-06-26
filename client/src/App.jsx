@@ -15,6 +15,8 @@ import Otp from './pages/Otp';
 import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Cart from './pages/Cart';
+import Dashboard from './pages/admin/Dashboard';
+import Index from './pages/admin/Index';
 const MainLayout = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -41,6 +43,12 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/cart" element={<Cart />} />
+          </Route>
+
+
+          {/* --- ADMIN --- */}
+          <Route path="admin" element={<Index />}>
+            <Route index element={<Dashboard />} />
           </Route>
 
           {/* Các route không dùng layout */}
