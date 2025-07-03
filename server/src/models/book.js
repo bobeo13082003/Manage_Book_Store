@@ -1,4 +1,3 @@
-// models/book.model.js
 const mongoose = require('mongoose');
 
 const bookSchema = new mongoose.Schema({
@@ -8,7 +7,7 @@ const bookSchema = new mongoose.Schema({
     price: { type: Number, required: true, min: 0 },
     stock: { type: Number, default: 0, min: 0 },
     coverUrl: String,
-    authors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Author' }],
+    authors: [{ type: String, required: true }],
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     status: { type: String, enum: ['active' | 'inactive'], default: 'active' },
     tags: [String],

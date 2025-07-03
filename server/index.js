@@ -20,6 +20,12 @@ app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const slug = require('mongoose-slug-generator');
+const { default: mongoose } = require('mongoose');
+
+mongoose.plugin(slug);
+
+
 userRouter(app)
 authRouter(app)
 adminRouter(app)

@@ -1,4 +1,5 @@
 const Users = require("../../models/user");
+const { hashPassword } = require("../../utils/bcryptHelper");
 
 module.exports.getAll = async (req, res) => {
     try {
@@ -11,14 +12,13 @@ module.exports.getAll = async (req, res) => {
             id: u._id.toString(),
             username: u.username,
             email: u.email,
-            fullName: u.fullName,
             phone: u.phone,
             address: u.address,
             role: u.role,
             status: u.status,
             avatar: u.avatar || { url: '', public_id: '' },
-            createdAt: u.createdAt.toISOString().slice(0, 10),
-            updatedAt: u.updatedAt.toISOString().slice(0, 10)
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt
         }));
 
         return res.json(users);
@@ -34,7 +34,6 @@ module.exports.create = async (req, res) => {
             username,
             email,
             password,
-            fullName,
             phone,
             address,
             role = 0,
@@ -47,13 +46,12 @@ module.exports.create = async (req, res) => {
         if (await Users.exists({ email }))
             return res.status(409).json({ message: 'Email đã tồn tại' });
 
-        const hash = await bcrypt.hash(password, 10);
+        const hash = await hashPassword(password);
 
         const doc = await Users.create({
             username,
             email,
             password: hash,
-            fullName,
             phone,
             address,
             role,
@@ -114,7 +112,7 @@ module.exports.updateStatus = async (req, res) => {
 module.exports.updateRole = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role } = req.body;              // 0 | 1
+        const { role } = req.body;
 
         if (![0, 1].includes(Number(role)))
             return res.status(400).json({ message: 'role phải là 0 hoặc 1' });

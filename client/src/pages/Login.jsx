@@ -10,6 +10,7 @@ import { customerLogin } from '../services/Customer/ApiAuth';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { login } from '../store/customer/authSlice';
+import { jwtDecode } from "jwt-decode";
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [email, setEmail] = useState("")
@@ -36,9 +37,14 @@ const Login = () => {
                     accessToken: res.data?.accessToken,
                     refreshToken: res.data?.refreshToken
                 }
+                const decoded = jwtDecode(dataToken.accessToken);
+                if (decoded?.role === 0) {
+                    navigate("/");
+                } else if (decoded?.role === 1) {
+                    navigate("/admin");
+                }
                 dispatch(login(dataToken))
                 toast.success("Đăng Nhập Thành Công")
-                navigate('/')
             } else if (res.data) {
                 const status = res.data.code;
                 switch (status) {

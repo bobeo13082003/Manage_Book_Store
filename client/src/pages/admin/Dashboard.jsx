@@ -32,6 +32,9 @@ import {
 import UserManagement from './UserManagement';
 import OrderManagement from './OrderManagement';
 import BookManagement from './Book';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../store/customer/authSlice';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -103,6 +106,9 @@ const Dashboard = () => {
         },
     ];
 
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+
     const categories = [...new Set(books.map(book => book.category))];
 
     const filteredBooks = books.filter(book => {
@@ -123,6 +129,10 @@ const Dashboard = () => {
         setSelectedBook(book);
         setIsModalOpen(true);
     };
+    const handleLogout = async () => {
+        dispatch(logout())
+        navigate('/login')
+    }
 
     const getStatusBadge = (status) => {
         switch (status) {
@@ -325,7 +335,7 @@ const Dashboard = () => {
                             <h1 className="text-xl font-bold text-gray-900">BookStore Admin</h1>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <Button variant="outline" size="sm">
+                            <Button onClick={handleLogout} variant="outline" size="sm">
                                 Đăng xuất
                             </Button>
                         </div>

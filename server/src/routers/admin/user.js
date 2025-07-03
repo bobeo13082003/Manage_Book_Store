@@ -4,7 +4,7 @@ const Authozation = require("../../middleware/auth")
 const controller = require('../../controllers/admin/user')
 // const { upload } = require('../../middleware/upload.middleware');
 
-router.get('/all-users', Authozation.authenticateToken, Authozation.authorizeRoles(1), controller.getAll);
+router.get('/all-user', Authozation.authenticateToken, Authozation.authorizeRoles(1), controller.getAll);
 
 router.post('/',
     Authozation.authenticateToken, Authozation.authorizeRoles(1),

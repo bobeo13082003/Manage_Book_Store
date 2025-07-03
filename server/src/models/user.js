@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema({
         url: { type: String, default: "" },
         public_id: { type: String, default: "" },
     },
-    fullName: String,
     phone: String,
     address: String,
     role: { type: Number, enum: [0, 1], default: 0 },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,57 +19,22 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Search, Edit, Trash2, UserPlus, Filter } from 'lucide-react';
+import UserModal from './UserModal';
+import { allUser } from '../../services/Admin/ApiUser';
+import { toast } from 'react-toastify';
 
 const UserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
 
-    // Sample data based on your User model
-    const users = [
-        {
-            id: '1',
-            username: 'nguyenvana',
-            email: 'nguyenvana@email.com',
-            fullName: 'Nguyễn Văn A',
-            phone: '0901234567',
-            address: '123 Nguyễn Huệ, Q1, TP.HCM',
-            role: 0,
-            status: 'active',
-            avatar: { url: '', public_id: '' },
-            createdAt: '2024-01-15',
-            updatedAt: '2024-01-15'
-        },
-        {
-            id: '2',
-            username: 'tranthib',
-            email: 'tranthib@email.com',
-            fullName: 'Trần Thị B',
-            phone: '0907654321',
-            address: '456 Lê Lợi, Q3, TP.HCM',
-            role: 1,
-            status: 'active',
-            avatar: { url: '', public_id: '' },
-            createdAt: '2024-01-10',
-            updatedAt: '2024-01-20'
-        },
-        {
-            id: '3',
-            username: 'lequangc',
-            email: 'lequangc@email.com',
-            fullName: 'Lê Quang C',
-            phone: '0912345678',
-            address: '789 Võ Văn Tần, Q1, TP.HCM',
-            role: 0,
-            status: 'inactive',
-            avatar: { url: '', public_id: '' },
-            createdAt: '2024-01-05',
-            updatedAt: '2024-01-25'
-        }
-    ];
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const filteredUsers = users.filter(user => {
-        const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchesSearch =
             user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.username.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -79,6 +44,23 @@ const UserManagement = () => {
         return matchesSearch && matchesRole && matchesStatus;
     });
 
+    const handleCreateUser = () => {
+        setEditingUser(null);
+        setIsModalOpen(true);
+    }
+
+    const handleEditUser = (user) => {
+        setEditingUser(user);
+        setIsModalOpen(true);
+    };
+
+    // const handleDeleteUser = (userId) => {
+    //     if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+    //         setUsers(users.filter(user => user.id !== userId));
+    //     }
+    // };
+
+
     const getRoleBadge = (role) => {
         return role === 1 ? (
             <Badge variant="default">Quản trị</Badge>
@@ -86,6 +68,23 @@ const UserManagement = () => {
             <Badge variant="secondary">Khách hàng</Badge>
         );
     };
+
+    const getAllUser = async () => {
+        try {
+            const res = await allUser();
+            setUsers(res.data)
+        } catch (err) {
+            console.error(err);
+            toast.error("Không lấy được danh sách người dùng");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+
+        getAllUser();
+    }, []);
 
     const getStatusBadge = (status) => {
         return status === 'active' ? (
@@ -131,7 +130,7 @@ const UserManagement = () => {
                         </Select>
                     </div>
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleCreateUser} className="bg-blue-600 hover:bg-blue-700">
                     <UserPlus className="w-4 h-4 mr-2" />
                     Thêm người dùng
                 </Button>
@@ -146,9 +145,9 @@ const UserManagement = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Tên đăng nhập</TableHead>
-                                <TableHead>Họ tên</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Số điện thoại</TableHead>
+                                <TableHead>Địa chỉ</TableHead>
                                 <TableHead>Vai trò</TableHead>
                                 <TableHead>Trạng thái</TableHead>
                                 <TableHead>Ngày tạo</TableHead>
@@ -159,20 +158,20 @@ const UserManagement = () => {
                             {filteredUsers.map((user) => (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium">{user.username}</TableCell>
-                                    <TableCell>{user.fullName}</TableCell>
                                     <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.phone || '—'}</TableCell>
+                                    <TableCell>{user.phone || 'Chưa Cập Nhật'}</TableCell>
+                                    <TableCell>{user.address || 'Chưa Cập Nhật'}</TableCell>
                                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                                     <TableCell>{getStatusBadge(user.status)}</TableCell>
                                     <TableCell>{new Date(user.createdAt).toLocaleDateString('vi-VN')}</TableCell>
                                     <TableCell>
                                         <div className="flex gap-2">
-                                            <Button variant="ghost" size="sm">
+                                            <Button onClick={() => handleEditUser(user)} variant="ghost" size="sm">
                                                 <Edit className="w-4 h-4" />
                                             </Button>
-                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                            {/* <Button onClick={() => handleDeleteUser(user.id)} variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
                                                 <Trash2 className="w-4 h-4" />
-                                            </Button>
+                                            </Button> */}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -181,6 +180,12 @@ const UserManagement = () => {
                     </Table>
                 </CardContent>
             </Card>
+            <UserModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                user={editingUser}
+                getAllUser={getAllUser}
+            />
         </div>
     );
 };
