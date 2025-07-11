@@ -7,7 +7,6 @@ const connectDb = require('./src/config/db')
 const userRouter = require('./src/routers/user/index')
 const authRouter = require('./src/routers/auth/index')
 const adminRouter = require('./src/routers/admin/index')
-
 require('dotenv').config();
 
 const corsOptions = {

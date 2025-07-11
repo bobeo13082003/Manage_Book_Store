@@ -1,6 +1,6 @@
 
 import './App.css'
-import { BrowserRouter as Router, Routes, Route, Outlet, BrowserRouter } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, BrowserRouter, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -39,15 +39,15 @@ function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path='/' element={<MainLayout />}>
+          {/* <Route path='/' element={<MainLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/cart" element={<Cart />} />
-          </Route>
-
+          </Route> */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
           {/* --- ADMIN --- */}
-          <Route path="admin" element={<Index />}>
+          <Route path='/admin' element={<Index />}>
             <Route index element={<Dashboard />} />
           </Route>
 

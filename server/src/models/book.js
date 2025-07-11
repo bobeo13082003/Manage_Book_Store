@@ -6,13 +6,19 @@ const bookSchema = new mongoose.Schema({
     description: String,
     price: { type: Number, required: true, min: 0 },
     stock: { type: Number, default: 0, min: 0 },
-    coverUrl: String,
+    coverUrl: [
+        {
+            url: String,
+            public_id: String,
+        }
+    ],
     authors: [{ type: String, required: true }],
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-    status: { type: String, enum: ['active' | 'inactive'], default: 'active' },
+    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
     tags: [String],
     avgRating: { type: Number, default: 0 },
-    numReviews: { type: Number, default: 0 }
+    numReviews: { type: Number, default: 0 },
+    deleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 

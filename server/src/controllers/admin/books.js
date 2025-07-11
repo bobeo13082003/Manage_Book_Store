@@ -1,35 +1,52 @@
 const Book = require("../../models/book");
 const slugify = require('slugify');
 const { Category } = require("../../models/categories");
+
 module.exports.createBook = async (req, res) => {
     try {
-        const { title, description, price, stock, coverUrl, authors, category, tags } = req.body;
+        const { title, description, price, stock, authors, category, tags, status } = req.body;
 
         if (!title || !price) {
             return res.status(400).json({ message: "Title and price are required" });
         }
 
+        let images = [];
+        if (req.files && req.files.coverUrl) {
+            const uploadedFiles = Array.isArray(req.files.coverUrl)
+                ? req.files.coverUrl
+                : [req.files.coverUrl];
+
+            if (uploadedFiles.length > 3) {
+                return res.status(400).json({ message: "Maximum 3 images allowed" });
+            }
+
+            images = uploadedFiles.map(f => ({ url: f.path, public_id: f.filename }));
+        }
+
         const newBook = new Book({
             title,
+            slug: slugify(title, { lower: true, strict: true }),
             description,
             price,
             stock,
-            coverUrl,
+            coverUrl: images,
             authors,
             category,
-            tags
+            tags,
+            status
         });
 
         const savedBook = await newBook.save();
         res.status(201).json(savedBook);
     } catch (error) {
+        console.error('Lỗi khi tạo sách:', error);
         res.status(500).json({ message: "Failed to create book", error: error.message });
     }
-}
+};
 
 module.exports.getAllBooks = async (req, res) => {
     try {
-        const books = await Book.find()
+        const books = await Book.find({ deleted: false })
             .populate('authors')
             .populate('category');
         res.json(books);
@@ -37,6 +54,44 @@ module.exports.getAllBooks = async (req, res) => {
         res.status(500).json({ message: "Failed to fetch books", error: error.message });
     }
 };
+
+// exports.getAllBooks = async (req, res) => {
+//   try {
+//     // ----- Lấy query & set mặc định -----
+//     const page   = Math.max(parseInt(req.query.page)  || 1, 1);
+//     const limit  = Math.max(parseInt(req.query.limit) || 20, 1);
+//     const skip   = (page - 1) * limit;
+
+//     // ----- Xây filter động -----
+//     const filter = {};
+//     if (req.query.status)   filter.status   = req.query.status;
+//     if (req.query.category) filter.category = req.query.category;
+
+//     // ----- Truy vấn DB -----
+//     const [books, total] = await Promise.all([
+//       Book.find(filter)
+//           .skip(skip)
+//           .limit(limit)
+//           .populate('category', 'name')  // chỉ lấy trường name
+//           .lean(),                       // bỏ meta Mongoose, trả object thường
+//       Book.countDocuments(filter)
+//     ]);
+
+//     // ----- Trả về -----
+//     return res.status(200).json({
+//       total,
+//       page,
+//       limit,
+//       data: books
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     return res
+//       .status(500)
+//       .json({ message: 'Lấy danh sách sách thất bại', error: err.message });
+//   }
+// };
+
 
 module.exports.getBookById = async (req, res) => {
     try {
@@ -59,13 +114,31 @@ module.exports.updateBook = async (req, res) => {
             updates.slug = slugify(title, { lower: true, strict: true });
         }
 
+        if (req.files && req.files.coverUrl) {
+            const uploadedFiles = Array.isArray(req.files.coverUrl)
+                ? req.files.coverUrl
+                : [req.files.coverUrl];
+
+            if (uploadedFiles.length > 3) {
+                return res.status(400).json({ message: "Maximum 3 images allowed" });
+            }
+
+            const images = uploadedFiles.map(f => ({
+                url: f.path,
+                public_id: f.filename
+            }));
+
+            updates.coverUrl = images;
+
+        }
+
         const updated = await Book.findByIdAndUpdate(
             req.params.id,
             updates,
             { new: true, runValidators: true }
         );
-        if (!updated) return res.status(404).json({ message: 'Book not found' });
 
+        if (!updated) return res.status(404).json({ message: 'Book not found' });
         res.json(updated);
     } catch (err) {
         res.status(500).json({ message: 'Failed to update book', error: err.message });
@@ -74,7 +147,7 @@ module.exports.updateBook = async (req, res) => {
 
 module.exports.deleteBook = async (req, res) => {
     try {
-        const deletedBook = await Book.findByIdAndDelete(req.params.id);
+        const deletedBook = await Book.findByIdAndUpdate(req.params.id, { deleted: true });
         if (!deletedBook) return res.status(404).json({ message: "Book not found" });
 
         res.json({ message: "Book deleted successfully" });
@@ -89,11 +162,11 @@ module.exports.createCategory = async (req, res) => {
         if (!name) {
             return res.status(400).json({ message: 'name is required' });
         }
-
         const category = new Category({
             name,
             slug: slugify(name, { lower: true, strict: true })
         });
+
 
         const saved = await category.save();
         res.status(201).json(saved);

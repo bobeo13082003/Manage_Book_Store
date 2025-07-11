@@ -15,6 +15,7 @@ export const updateCategory = (id, data) =>
     });
 export const deleteCategory = (id) => instance.delete(`/admin/book/category/${id}`);
 
-export const createBook = (data) => instance.post('/admin/book', data);
+export const createBook = (data) => instance.post('/admin/book', data)
+export const allBook = () => instance.get('/admin/book')
 export const updateBook = (id, data) => instance.put(`/admin/book/${id}`, data);
 export const getBookById = (id) => instance.get(`/admin/book/${id}`);

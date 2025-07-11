@@ -11,12 +11,12 @@ router.get('/category/:id', Authozation.authenticateToken, Authozation.authorize
 router.put('/category/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.updateCategory);
 router.delete('/category/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.deleteCategory);
 
-router.post('/', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.createBook);
+router.post('/', Authozation.authenticateToken, Authozation.authorizeRoles(1), upload.fields([{ name: 'coverUrl', maxCount: 3 }]), bookController.createBook);
 
 router.get('/', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.getAllBooks);
 router.get('/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.getBookById);
 
-router.put('/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.updateBook);
+router.put('/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), upload.fields([{ name: 'coverUrl', maxCount: 3 }]), bookController.updateBook);
 
 router.delete('/:id', Authozation.authenticateToken, Authozation.authorizeRoles(1), bookController.deleteBook);
 

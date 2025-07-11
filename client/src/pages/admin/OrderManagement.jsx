@@ -1,224 +1,270 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { Search, Edit, Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const OrderManagement = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [dateFilter, setDateFilter] = useState('all');
-
-    // Sample data based on your Order model
-    const orders = [
-        {
-            id: '1',
-            userId: '1',
-            userEmail: 'nguyenvana@email.com',
-            items: [
-                { bookId: '1', bookTitle: 'Đắc Nhân Tâm', quantity: 2, price: 120000 },
-                { bookId: '2', bookTitle: 'Nhà Giả Kim', quantity: 1, price: 85000 }
-            ],
-            status: 'paid',
-            totalPrice: 325000,
-            shippingInfo: {
-                recipient: 'Nguyễn Văn A',
-                phone: '0901234567',
-                address: '123 Nguyễn Huệ, Q1, TP.HCM'
-            },
-            paymentId: 'PAY_123456',
-            createdAt: '2024-01-20',
-            updatedAt: '2024-01-20'
-        },
-        {
-            id: '2',
-            userId: '3',
-            userEmail: 'lequangc@email.com',
-            items: [
-                { bookId: '3', bookTitle: 'Tư Duy Nhanh Và Chậm', quantity: 1, price: 200000 }
-            ],
-            status: 'shipped',
-            totalPrice: 200000,
-            shippingInfo: {
-                recipient: 'Lê Quang C',
-                phone: '0912345678',
-                address: '789 Võ Văn Tần, Q1, TP.HCM'
-            },
-            paymentId: 'PAY_789012',
-            createdAt: '2024-01-18',
-            updatedAt: '2024-01-19'
-        },
-        {
-            id: '3',
-            userId: '1',
-            userEmail: 'nguyenvana@email.com',
-            items: [
-                { bookId: '2', bookTitle: 'Nhà Giả Kim', quantity: 3, price: 85000 }
-            ],
-            status: 'pending',
-            totalPrice: 255000,
-            shippingInfo: {
-                recipient: 'Nguyễn Văn A',
-                phone: '0901234567',
-                address: '123 Nguyễn Huệ, Q1, TP.HCM'
-            },
-            createdAt: '2024-01-22',
-            updatedAt: '2024-01-22'
-        }
+    // Dữ liệu mẫu cho danh sách sách
+    const books = [
+        { id: '1', title: 'Đắc Nhân Tâm', price: 120000 },
+        { id: '2', title: 'Nhà Giả Kim', price: 85000 },
+        { id: '3', title: 'Tư Duy Nhanh Và Chậm', price: 200000 },
     ];
 
-    const filteredOrders = orders.filter(order => {
-        const matchesSearch = order.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.shippingInfo.recipient.toLowerCase().includes(searchTerm.toLowerCase());
+    // Trạng thái biểu mẫu
+    const [formData, setFormData] = useState({
+        userEmail: '',
+        recipient: '',
+        phone: '',
+        address: '',
+        status: 'pending',
+        items: [{ bookId: '', quantity: 1 }],
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-        const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    // Tính tổng giá
+    const totalPrice = formData.items.reduce((total, item) => {
+        const book = books.find(b => b.id === item.bookId);
+        return total + (book ? book.price * item.quantity : 0);
+    }, 0);
 
-        let matchesDate = true;
-        if (dateFilter !== 'all') {
-            const orderDate = new Date(order.createdAt);
-            const now = new Date();
-            const daysDiff = Math.floor((now.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
+    // Xử lý thay đổi input
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-            switch (dateFilter) {
-                case 'today':
-                    matchesDate = daysDiff === 0;
-                    break;
-                case 'week':
-                    matchesDate = daysDiff <= 7;
-                    break;
-                case 'month':
-                    matchesDate = daysDiff <= 30;
-                    break;
-            }
+    // Xử lý thay đổi item (sách)
+    const handleItemChange = (index, field, value) => {
+        const newItems = [...formData.items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        setFormData(prev => ({ ...prev, items: newItems }));
+    };
+
+    // Thêm item mới
+    const addItem = () => {
+        setFormData(prev => ({
+            ...prev,
+            items: [...prev.items, { bookId: '', quantity: 1 }],
+        }));
+    };
+
+    // Xóa item
+    const removeItem = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            items: prev.items.filter((_, i) => i !== index),
+        }));
+    };
+
+    // Xử lý gửi biểu mẫu
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        // Kiểm tra dữ liệu
+        if (!formData.userEmail || !formData.recipient || !formData.phone || !formData.address) {
+            setError('Vui lòng điền đầy đủ thông tin khách hàng.');
+            toast.error('Vui lòng điền đầy đủ thông tin khách hàng.');
+            setIsLoading(false);
+            return;
         }
 
-        return matchesSearch && matchesStatus && matchesDate;
-    });
+        if (formData.items.length === 0 || formData.items.some(item => !item.bookId || item.quantity <= 0)) {
+            setError('Vui lòng chọn ít nhất một sách và số lượng hợp lệ.');
+            toast.error('Vui lòng chọn ít nhất một sách và số lượng hợp lệ.');
+            setIsLoading(false);
+            return;
+        }
 
-    const getStatusBadge = (status) => {
-        const statusMap = {
-            pending: { variant: 'secondary', text: 'Chờ xử lý' },
-            paid: { variant: 'default', text: 'Đã thanh toán' },
-            shipped: { variant: 'default', text: 'Đã gửi hàng' },
-            completed: { variant: 'default', text: 'Hoàn thành' },
-            cancelled: { variant: 'destructive', text: 'Đã hủy' }
-        };
+        // Tạo FormData
+        const fd = new FormData();
+        fd.append('userEmail', formData.userEmail);
+        fd.append('recipient', formData.recipient);
+        fd.append('phone', formData.phone);
+        fd.append('address', formData.address);
+        fd.append('status', formData.status);
+        formData.items.forEach((item, index) => {
+            fd.append(`items[${index}][bookId]`, item.bookId);
+            fd.append(`items[${index}][quantity]`, item.quantity);
+        });
 
-        const statusInfo = statusMap[status]
-        return <Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>;
+        try {
+            // const res = await createOrder(fd);
+            // if (res.status === 201) {
+            //     toast.success('Tạo đơn hàng thành công!');
+            //     setFormData({
+            //         userEmail: '',
+            //         recipient: '',
+            //         phone: '',
+            //         address: '',
+            //         status: 'pending',
+            //         items: [{ bookId: '', quantity: 1 }],
+            //     });
+            // }
+        } catch (err) {
+            setError('Tạo đơn hàng thất bại.');
+            toast.error('Tạo đơn hàng thất bại: ' + err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-                <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <Input
-                            placeholder="Tìm kiếm đơn hàng..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
-                    <div className="flex gap-2 items-center">
-                        <Filter className="w-4 h-4 text-gray-500" />
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Trạng thái" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                                <SelectItem value="pending">Chờ xử lý</SelectItem>
-                                <SelectItem value="paid">Đã thanh toán</SelectItem>
-                                <SelectItem value="shipped">Đã gửi hàng</SelectItem>
-                                <SelectItem value="completed">Hoàn thành</SelectItem>
-                                <SelectItem value="cancelled">Đã hủy</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={dateFilter} onValueChange={setDateFilter}>
-                            <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Thời gian" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tất cả</SelectItem>
-                                <SelectItem value="today">Hôm nay</SelectItem>
-                                <SelectItem value="week">7 ngày qua</SelectItem>
-                                <SelectItem value="month">30 ngày qua</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </div>
-
             <Card>
                 <CardHeader>
-                    <CardTitle>Danh sách đơn hàng ({filteredOrders.length})</CardTitle>
+                    <CardTitle>Tạo đơn hàng mới</CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Mã đơn</TableHead>
-                                <TableHead>Khách hàng</TableHead>
-                                <TableHead>Sản phẩm</TableHead>
-                                <TableHead>Tổng giá</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                                <TableHead>Ngày đặt</TableHead>
-                                <TableHead>Thao tác</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredOrders.map((order) => (
-                                <TableRow key={order.id}>
-                                    <TableCell className="font-medium">#{order.id}</TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <div className="font-medium">{order.shippingInfo.recipient}</div>
-                                            <div className="text-sm text-gray-600">{order.userEmail}</div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            {order.items.map((item, index) => (
-                                                <div key={index} className="text-sm">
-                                                    {item.bookTitle} x{item.quantity}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="font-semibold">
-                                        ₫{order.totalPrice.toLocaleString()}
-                                    </TableCell>
-                                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                                    <TableCell>
-                                        {new Date(order.createdAt).toLocaleDateString('vi-VN')}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="sm">
-                                            <Edit className="w-4 h-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Thông tin khách hàng */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Thông tin khách hàng</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="userEmail">Email khách hàng</Label>
+                                    <Input
+                                        id="userEmail"
+                                        name="userEmail"
+                                        value={formData.userEmail}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập email khách hàng"
+                                        className="bg-white dark:bg-slate-800"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="recipient">Tên người nhận</Label>
+                                    <Input
+                                        id="recipient"
+                                        name="recipient"
+                                        value={formData.recipient}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập tên người nhận"
+                                        className="bg-white dark:bg-slate-800"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="phone">Số điện thoại</Label>
+                                    <Input
+                                        id="phone"
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập số điện thoại"
+                                        className="bg-white dark:bg-slate-800"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="address">Địa chỉ giao hàng</Label>
+                                    <Input
+                                        id="address"
+                                        name="address"
+                                        value={formData.address}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập địa chỉ giao hàng"
+                                        className="bg-white dark:bg-slate-800"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Danh sách sách */}
+                        <div className="space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg shadow">
+                            <h3 className="text-lg font-semibold">Sản phẩm</h3>
+                            {formData.items.map((item, index) => (
+                                <div key={index} className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <Label htmlFor={`book-${index}`}>Chọn sách</Label>
+                                        <Select
+                                            value={item.bookId}
+                                            onValueChange={(value) => handleItemChange(index, 'bookId', value)}
+                                        >
+                                            <SelectTrigger
+                                                id={`book-${index}`}
+                                                className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600"
+                                            >
+                                                <SelectValue placeholder="Chọn sách" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600">
+                                                {books.map(book => (
+                                                    <SelectItem key={book.id} value={book.id}>
+                                                        {book.title} - ₫{book.price.toLocaleString()}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="w-24">
+                                        <Label htmlFor={`quantity-${index}`}>Số lượng</Label>
+                                        <Input
+                                            id={`quantity-${index}`}
+                                            type="number"
+                                            min="1"
+                                            value={item.quantity}
+                                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                                            className="bg-white dark:bg-slate-800"
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => removeItem(index)}
+                                        disabled={formData.items.length === 1}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             ))}
-                        </TableBody>
-                    </Table>
+                            <Button type="button" variant="outline" onClick={addItem}>
+                                Thêm sách
+                            </Button>
+                        </div>
+
+                        {/* Trạng thái đơn hàng */}
+                        <div>
+                            <Label htmlFor="status">Trạng thái đơn hàng</Label>
+                            <Select
+                                value={formData.status}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                            >
+                                <SelectTrigger
+                                    id="status"
+                                    className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600"
+                                >
+                                    <SelectValue placeholder="Chọn trạng thái" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600">
+                                    <SelectItem value="pending">Chờ xử lý</SelectItem>
+                                    <SelectItem value="paid">Đã thanh toán</SelectItem>
+                                    <SelectItem value="shipped">Đã gửi hàng</SelectItem>
+                                    <SelectItem value="completed">Hoàn thành</SelectItem>
+                                    <SelectItem value="cancelled">Đã hủy</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Tổng giá */}
+                        <div className="text-lg font-semibold">
+                            Tổng giá: ₫{totalPrice.toLocaleString()}
+                        </div>
+
+                        {/* Thông báo lỗi */}
+                        {error && <div className="text-red-500">{error}</div>}
+
+                        {/* Nút gửi */}
+                        <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" disabled={isLoading}>
+                            {isLoading ? 'Đang xử lý...' : 'Tạo đơn hàng'}
+                        </Button>
+                    </form>
                 </CardContent>
             </Card>
         </div>

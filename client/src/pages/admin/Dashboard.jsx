@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,7 @@ import BookManagement from './Book';
 import { useDispatch } from 'react-redux';
 import { logout } from '../../store/customer/authSlice';
 import { useNavigate } from 'react-router-dom';
+import { allBook } from '../../services/Admin/ApiBook';
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -43,7 +44,9 @@ const Dashboard = () => {
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [selectedBook, setSelectedBook] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-
+    const [books, setBooks] = useState([]);
+    const [loadingBooks, setLoadingBooks] = useState(false);
+    const [fetchError, setFetchError] = useState(null);
     // Sample data with enhanced structure based on your models
     const stats = [
         { title: 'Tổng sách', value: '1,234', icon: Book, color: 'text-blue-600' },
@@ -52,70 +55,34 @@ const Dashboard = () => {
         { title: 'Doanh thu tháng', value: '₫15.2M', icon: DollarSign, color: 'text-orange-600' },
     ];
 
-    const books = [
-        {
-            id: '1',
-            title: 'Đắc Nhân Tâm',
-            slug: 'dac-nhan-tam',
-            description: 'Cuốn sách kinh điển về nghệ thuật giao tiếp và ứng xử',
-            price: 120000,
-            stock: 50,
-            coverUrl: '',
-            authors: ['Dale Carnegie'],
-            category: 'Tâm lý học',
-            tags: ['tâm lý', 'kỹ năng sống', 'giao tiếp'],
-            status: 'active',
-            avgRating: 4.5,
-            numReviews: 245,
-            createdAt: '2024-01-15',
-            updatedAt: '2024-01-15'
-        },
-        {
-            id: '2',
-            title: 'Nhà Giả Kim',
-            slug: 'nha-gia-kim',
-            description: 'Câu chuyện về hành trình tìm kiếm ước mơ',
-            price: 85000,
-            stock: 30,
-            coverUrl: '',
-            authors: ['Paulo Coelho'],
-            category: 'Tiểu thuyết',
-            tags: ['tiểu thuyết', 'triết học', 'ước mơ'],
-            status: 'active',
-            avgRating: 4.3,
-            numReviews: 189,
-            createdAt: '2024-01-10',
-            updatedAt: '2024-01-10'
-        },
-        {
-            id: '3',
-            title: 'Tư Duy Nhanh Và Chậm',
-            slug: 'tu-duy-nhanh-va-cham',
-            description: 'Khám phá cách thức hoạt động của bộ não',
-            price: 200000,
-            stock: 0,
-            coverUrl: '',
-            authors: ['Daniel Kahneman'],
-            category: 'Khoa học',
-            tags: ['tâm lý học', 'khoa học', 'tư duy'],
-            status: 'inactive',
-            avgRating: 4.7,
-            numReviews: 78,
-            createdAt: '2024-01-05',
-            updatedAt: '2024-01-05'
-        },
-    ];
+    const getAllBook = async () => {
+        setLoadingBooks(true);
+        setFetchError(null);
+        try {
+            const res = await allBook();
+            setBooks(res.data);
+        } catch (err) {
+            setFetchError(err.response?.data?.message || 'Không thể tải sách');
+        } finally {
+            setLoadingBooks(false);
+        }
+    }
 
+    useEffect(() => {
+        getAllBook();
+    }, []);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const categories = [...new Set(books.map(book => book.category))];
+    const categories = [...new Set(books.map(b => b.category.name))];
 
     const filteredBooks = books.filter(book => {
-        const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            book.authors.some(author => author.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesSearch =
+            book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            book.authors.some(a => a.toLowerCase().includes(searchTerm.toLowerCase()));
+
         const matchesStatus = statusFilter === 'all' || book.status === statusFilter;
-        const matchesCategory = categoryFilter === 'all' || book.category === categoryFilter;
+        const matchesCategory = categoryFilter === 'all' || book.category.name === categoryFilter;
 
         return matchesSearch && matchesStatus && matchesCategory;
     });
@@ -170,7 +137,7 @@ const Dashboard = () => {
                     <CardContent>
                         <div className="space-y-4">
                             {books.slice(0, 3).map((book) => (
-                                <div key={book.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div key={book._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
                                         <p className="font-medium">{book.title}</p>
                                         <p className="text-sm text-gray-600">{book.authors.join(', ')}</p>
@@ -196,7 +163,7 @@ const Dashboard = () => {
                     <CardContent>
                         <div className="space-y-4">
                             {books.filter(book => book.stock < 20).map((book) => (
-                                <div key={book.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                                <div key={book._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
                                     <div>
                                         <p className="font-medium">{book.title}</p>
                                         <p className="text-sm text-gray-600">{book.authors.join(', ')}</p>
@@ -262,65 +229,70 @@ const Dashboard = () => {
                     Thêm sách mới
                 </Button>
             </div>
+            {loadingBooks ? (
+                <p className="p-6 text-center text-sm text-gray-500">Đang tải danh sách sách...</p>) : (
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>
-                        Danh sách sách ({filteredBooks.length} / {books.length})
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Sách</TableHead>
-                                <TableHead>Tác giả</TableHead>
-                                <TableHead>Danh mục</TableHead>
-                                <TableHead>Giá</TableHead>
-                                <TableHead>Tồn kho</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                                <TableHead>Đánh giá</TableHead>
-                                <TableHead>Thao tác</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredBooks.map((book) => (
-                                <TableRow key={book.id} className={book.status === 'inactive' ? 'opacity-60' : ''}>
-                                    <TableCell className="font-medium">{book.title}</TableCell>
-                                    <TableCell>{book.authors.join(', ')}</TableCell>
-                                    <TableCell>{book.category}</TableCell>
-                                    <TableCell>₫{book.price.toLocaleString()}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={book.stock === 0 ? "destructive" : book.stock < 20 ? "secondary" : "default"}>
-                                            {book.stock}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {getStatusBadge(book.status)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-yellow-500">★</span>
-                                            <span>{book.avgRating}</span>
-                                            <span className="text-gray-500 text-sm">({book.numReviews})</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => handleEditBook(book)}>
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>
+                            Danh sách sách ({filteredBooks.length} / {books.length})
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Sách</TableHead>
+                                    <TableHead>Tác giả</TableHead>
+                                    <TableHead>Danh mục</TableHead>
+                                    <TableHead>Giá</TableHead>
+                                    <TableHead>Tồn kho</TableHead>
+                                    <TableHead>Trạng thái</TableHead>
+                                    <TableHead>Đánh giá</TableHead>
+                                    <TableHead>Thao tác</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+
+                            <TableBody>
+
+                                {filteredBooks.map((book) => (
+                                    <TableRow key={book._id} className={book.status === 'inactive' ? 'opacity-60' : ''}>
+                                        <TableCell className="font-medium">{book.title}</TableCell>
+                                        <TableCell>{book.authors.join(', ')}</TableCell>
+                                        <TableCell>{book.category.name}</TableCell>
+                                        <TableCell>₫{book.price.toLocaleString()}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={book.stock === 0 ? "destructive" : book.stock < 20 ? "secondary" : "default"}>
+                                                {book.stock}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {getStatusBadge(book.status)}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-yellow-500">★</span>
+                                                <span>{book.avgRating}</span>
+                                                <span className="text-gray-500 text-sm">({book.numReviews})</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-2">
+                                                <Button variant="ghost" size="sm" onClick={() => handleEditBook(book)}>
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 
@@ -401,6 +373,7 @@ const Dashboard = () => {
             <BookManagement
                 book={selectedBook}
                 isOpen={isModalOpen}
+                getAllBook={getAllBook}
                 onClose={() => setIsModalOpen(false)}
                 onSave={(bookData) => {
                     console.log('Saving book:', bookData);

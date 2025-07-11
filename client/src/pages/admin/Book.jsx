@@ -10,14 +10,13 @@ import { toast } from 'react-toastify';
 import CategoryModal from './CategoryModal';
 import { getAllCategories, createCategory, updateCategory, deleteCategory, createBook, updateBook } from '../../services/Admin/ApiBook';
 
-const BookManagement = ({ book, isOpen, onClose, onSave }) => {
+const BookManagement = ({ book, isOpen, onClose, onSave, getAllBook }) => {
     const [formData, setFormData] = useState({
         title: '',
-        slug: '',
         description: '',
-        price: 0,
-        stock: 0,
-        coverUrl: '',
+        price: '',
+        stock: '',
+        coverUrl: [],
         authors: [''],
         categoryId: '',
         tags: [''],
@@ -28,6 +27,9 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [files, setFiles] = useState([]);
+    const [previewImages, setPreviewImages] = useState([]);
+    const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -50,61 +52,164 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
             }
         };
         fetchCategories();
+
     }, []);
+    console.log(book);
+    console.log(categories);
+
 
     useEffect(() => {
+        console.log('book:', book); // Ghi log toàn bộ book
         if (book) {
+            console.log('book:', book); // Ghi log toàn bộ book
+            console.log('book.category:', book.category); // Ghi log cụ thể book.category
+
+            const initialcoverUrl = Array.isArray(book.coverUrl) ? book.coverUrl.map(item => item.url || item) : [];
             setFormData({
                 title: book.title || '',
-                slug: book.slug || '',
                 description: book.description || '',
-                price: book.price || 0,
-                stock: book.stock || 0,
-                coverUrl: book.coverUrl || '',
+                price: book.price !== undefined ? String(book.price) : '',
+                stock: book.stock !== undefined ? String(book.stock) : '',
+                coverUrl: initialcoverUrl,
                 authors: book.authors && book.authors.length > 0 ? book.authors : [''],
                 categoryId: book.category?._id || (typeof book.category === 'string' ? book.category : ''),
                 tags: book.tags && book.tags.length > 0 ? book.tags : [''],
                 status: book.status || 'active',
             });
+            setPreviewImages(initialcoverUrl);
         } else {
             setFormData({
                 title: '',
-                slug: '',
                 description: '',
-                price: 0,
-                stock: 0,
-                coverUrl: '',
+                price: '',
+                stock: '',
+                coverUrl: [],
                 authors: [''],
                 categoryId: '',
                 tags: [''],
                 status: 'active',
             });
+            setPreviewImages([]);
         }
+        setFiles([]);
         setError(null);
+
+        setHasChanges(false);
     }, [book]);
+
+    useEffect(() => {
+        if (book) {
+            const cleanedFormData = {
+                ...formData,
+                authors: formData.authors.filter((a) => a.trim()),
+                tags: formData.tags.filter((t) => t.trim()),
+                category: formData.categoryId,
+                price: parseInt(formData.price) || 0,
+                stock: parseInt(formData.stock) || 0,
+                coverUrl: formData.coverUrl,
+            };
+            const initialcoverUrl = Array.isArray(book.coverUrl) ? book.coverUrl.map(item => item.url || item) : [];
+            const changesDetected =
+                book.title !== cleanedFormData.title ||
+                book.description !== cleanedFormData.description ||
+                book.price !== cleanedFormData.price ||
+                book.stock !== cleanedFormData.stock ||
+                book.category?._id !== cleanedFormData.category ||
+                JSON.stringify(book.authors || ['']) !== JSON.stringify(cleanedFormData.authors) ||
+                JSON.stringify(book.tags || ['']) !== JSON.stringify(cleanedFormData.tags) ||
+                book.status !== cleanedFormData.status ||
+                JSON.stringify(initialcoverUrl) !== JSON.stringify(cleanedFormData.coverUrl) ||
+                files.length > 0;
+            setHasChanges(changesDetected);
+        }
+    }, [formData, files, book]);
+
+
+
+    useEffect(() => {
+        return () => {
+            previewImages.forEach((url) => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+        };
+    }, [previewImages]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
+        if (formData.price === '' || formData.stock === '') {
+            setError('Giá và số lượng tồn kho không được để trống.');
+            toast.error('Giá và số lượng tồn kho không được để trống.');
+            setIsLoading(false);
+            return;
+        }
+
+        if (parseInt(formData.price) <= 0 || parseInt(formData.stock) < 0) {
+            setError('Giá phải lớn hơn 0 và số lượng tồn kho không được âm.');
+            toast.error('Giá phải lớn hơn 0 và số lượng tồn kho không được âm.');
+            setIsLoading(false);
+            return;
+        }
+
         const cleanedFormData = {
             ...formData,
             authors: formData.authors.filter((a) => a.trim()),
             tags: formData.tags.filter((t) => t.trim()),
             category: formData.categoryId,
+            price: parseInt(formData.price) || 0,
+            stock: parseInt(formData.stock) || 0,
+            coverUrl: formData.coverUrl,
         };
+
+        if (book && !hasChanges) {
+            setError('Không có thay đổi để cập nhật.');
+            toast.info('Không có thay đổi để cập nhật.');
+            setIsLoading(false);
+            return;
+        }
 
         try {
             if (book) {
-                await updateBook(book.id, cleanedFormData);
-                toast.success('Cập nhật sách thành công!');
+                const fd = new FormData();
+                fd.append('title', cleanedFormData.title.trim());
+                fd.append('description', cleanedFormData.description.trim());
+                fd.append('price', cleanedFormData.price);
+                fd.append('stock', cleanedFormData.stock);
+                fd.append('category', cleanedFormData.category);
+                cleanedFormData.authors.forEach(a => fd.append('authors', a));
+                cleanedFormData.tags.forEach(t => fd.append('tags', t));
+                fd.append('status', cleanedFormData.status);
+                cleanedFormData.coverUrl.forEach(url => fd.append('coverUrl', url));
+                files.forEach(f => fd.append('coverUrl', f));
+                const res = await updateBook(book._id, fd);
+                if (res.status === 200) {
+                    toast.success('Cập nhật sách thành công!');
+                    await getAllBook();
+                }
             } else {
-                await createBook(cleanedFormData);
-                toast.success('Thêm sách thành công!');
+                const fd = new FormData();
+                fd.append('title', cleanedFormData.title.trim());
+                fd.append('description', cleanedFormData.description.trim());
+                fd.append('price', cleanedFormData.price);
+                fd.append('stock', cleanedFormData.stock);
+                fd.append('category', cleanedFormData.category);
+                fd.append('status', cleanedFormData.status);
+                cleanedFormData.authors.forEach(a => fd.append('authors', a));
+                cleanedFormData.tags.forEach(t => fd.append('tags', t));
+                files.forEach(f => fd.append('coverUrl', f));
+                const res = await createBook(fd);
+
+                if (res.status === 201) {
+                    toast.success('Thêm sách thành công!');
+                    await getAllBook();
+                    onSave(cleanedFormData);
+                    onClose();
+                }
             }
-            onSave(cleanedFormData);
-            onClose();
         } catch (err) {
             const message = err.response?.data?.message || 'Có lỗi xảy ra khi lưu sách.';
             setError(message);
@@ -117,23 +222,8 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
     const handleChange = (field, value) => {
         setFormData((prev) => ({
             ...prev,
-            [field]: value,
+            [field]: field === 'price' || field === 'stock' ? (value === '' ? '' : parseInt(value) || 0) : value,
         }));
-
-        if (field === 'title') {
-            const slug = value
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .trim();
-            setFormData((prev) => ({
-                ...prev,
-                slug,
-            }));
-        }
     };
 
     const handleArrayChange = (field, index, value) => {
@@ -158,6 +248,50 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
             setFormData((prev) => ({
                 ...prev,
                 [field]: newArray,
+            }));
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        const validFiles = selectedFiles.filter(file => {
+            if (!validTypes.includes(file.type)) {
+                toast.error(`File ${file.name} không phải ảnh (JPEG, PNG, hoặc GIF).`);
+                return false;
+            }
+            if (file.size > maxSize) {
+                toast.error(`File ${file.name} quá lớn. Vui lòng chọn file nhỏ hơn 5MB.`);
+                return false;
+            }
+            return true;
+        });
+
+        setFiles(prev => [...prev, ...validFiles]);
+        const newPreviews = validFiles.map(file => URL.createObjectURL(file));
+        setPreviewImages(prev => [...prev, ...newPreviews]);
+    };
+
+    const removeImage = (index, isExistingUrl = false) => {
+        if (isExistingUrl) {
+            setFormData(prev => ({
+                ...prev,
+                coverUrl: prev.coverUrl.filter((_, i) => i !== index),
+            }));
+            setPreviewImages(prev => prev.filter((_, i) => i !== index));
+        } else {
+            const fileIndex = index - formData.coverUrl.length;
+            setFiles(prev => prev.filter((_, i) => i !== fileIndex));
+            setPreviewImages(prev => {
+                const newPreviews = prev.filter((_, i) => i !== index);
+                URL.revokeObjectURL(prev[index]);
+                return newPreviews;
+            });
+            setFormData(prev => ({
+                ...prev,
+                coverUrl: prev.coverUrl.filter((_, i) => i !== index),
             }));
         }
     };
@@ -249,6 +383,29 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
 
     if (!isOpen) return null;
 
+
+    // const isButtonDisabled =
+    //     !formData.title ||
+    //     formData.authors.every((a) => !a) ||
+    //     !formData.categoryId ||
+    //     formData.price === '' ||
+    //     formData.stock === '' ||
+    //     (book && !hasChanges) ||
+    //     isLoading;
+    // console.log({
+    //     isButtonDisabled,
+    //     title: formData.title,
+    //     authors: formData.authors,
+    //     categoryId: formData.categoryId,
+    //     price: formData.price,
+    //     stock: formData.stock,
+    //     hasChanges,
+    //     isLoading,
+    // });
+
+
+    console.log('Category ID in form:', JSON.stringify(formData));
+
     return (
         <>
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -300,13 +457,6 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                         <Badge className="bg-yellow-100 text-yellow-800">Tạm dừng</Badge>
                                     </div>
                                 </div>
-                                {formData.status === 'inactive' && (
-                                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                        <p className="text-sm text-yellow-700">
-                                            ⚠️ Sách tạm ngừng kinh doanh sẽ không hiển thị cho khách hàng mới nhưng vẫn có thể quản lý.
-                                        </p>
-                                    </div>
-                                )}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -316,17 +466,6 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                         value={formData.title}
                                         onChange={(e) => handleChange('title', e.target.value)}
                                         placeholder="Nhập tên sách..."
-                                        required
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="slug">Slug *</Label>
-                                    <Input
-                                        id="slug"
-                                        value={formData.slug}
-                                        onChange={(e) => handleChange('slug', e.target.value)}
-                                        placeholder="ten-sach-khong-dau..."
                                         required
                                         disabled={isLoading}
                                     />
@@ -403,7 +542,6 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                         ) : (
                                             <div className="text-sm text-red-500 italic">⚠️ Chưa có danh mục nào, hãy thêm danh mục trước.</div>
                                         )}
-
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -441,7 +579,7 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                         id="price"
                                         type="number"
                                         value={formData.price}
-                                        onChange={(e) => handleChange('price', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => handleChange('price', e.target.value)}
                                         placeholder="0"
                                         min="0"
                                         required
@@ -456,7 +594,7 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                         id="stock"
                                         type="number"
                                         value={formData.stock}
-                                        onChange={(e) => handleChange('stock', parseInt(e.target.value) || 0)}
+                                        onChange={(e) => handleChange('stock', e.target.value)}
                                         placeholder="0"
                                         min="0"
                                         required
@@ -464,14 +602,38 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="coverUrl">URL ảnh bìa</Label>
+                                    <Label htmlFor="coverUrl">Ảnh bìa</Label>
                                     <Input
                                         id="coverUrl"
-                                        value={formData.coverUrl}
-                                        onChange={(e) => handleChange('coverUrl', e.target.value)}
-                                        placeholder="https://..."
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleFileChange}
                                         disabled={isLoading}
                                     />
+                                    {previewImages.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {previewImages.map((url, index) => (
+                                                <div key={index} className="relative">
+                                                    <img
+                                                        src={url}
+                                                        alt={`Ảnh bìa ${index + 1}`}
+                                                        className="w-32 h-32 object-cover rounded-md"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="absolute top-0 right-0 w-6 h-6"
+                                                        onClick={() => removeImage(index, index < formData.coverUrl.length)}
+                                                        disabled={isLoading}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -509,14 +671,13 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                 <h4 className="font-medium mb-2">Xem trước thông tin:</h4>
                                 <div className="space-y-2 text-sm">
                                     <p><span className="font-medium">Tên sách:</span> {formData.title || 'Chưa nhập'}</p>
-                                    <p><span className="font-medium">Slug:</span> {formData.slug || 'Chưa nhập'}</p>
                                     <p><span className="font-medium">Tác giả:</span> {formData.authors.filter((a) => a).join(', ') || 'Chưa nhập'}</p>
                                     <p>
                                         <span className="font-medium">Danh mục:</span>{' '}
                                         {categories.find((cat) => cat.id === formData.categoryId)?.name || 'Chưa nhập'}
                                     </p>
-                                    <p><span className="font-medium">Giá:</span> ₫{formData.price.toLocaleString()}</p>
-                                    <p><span className="font-medium">Tồn kho:</span> {formData.stock} cuốn</p>
+                                    <p><span className="font-medium">Giá:</span> ₫{formData.price ? parseInt(formData.price).toLocaleString() : 'Chưa nhập'}</p>
+                                    <p><span className="font-medium">Tồn kho:</span> {formData.stock ? formData.stock : 'Chưa nhập'} cuốn</p>
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium">Trạng thái:</span>
                                         <Badge className={getStatusColor(formData.status)}>{getStatusText(formData.status)}</Badge>
@@ -531,6 +692,19 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                                 </Badge>
                                             ))}
                                     </div>
+                                    {previewImages.length > 0 && (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-medium">Ảnh bìa:</span>
+                                            {previewImages.map((url, index) => (
+                                                <img
+                                                    key={index}
+                                                    src={url}
+                                                    alt={`Ảnh bìa ${index + 1}`}
+                                                    className="w-16 h-16 object-cover rounded-md"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex gap-3 pt-4">
@@ -542,9 +716,11 @@ const BookManagement = ({ book, isOpen, onClose, onSave }) => {
                                     className="flex-1 bg-green-600 hover:bg-green-700"
                                     disabled={
                                         !formData.title ||
-                                        !formData.slug ||
                                         formData.authors.every((a) => !a) ||
                                         !formData.categoryId ||
+                                        formData.price === '' ||
+                                        formData.stock === '' ||
+                                        (book && !hasChanges) ||
                                         isLoading
                                     }
                                 >
