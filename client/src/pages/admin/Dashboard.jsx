@@ -36,6 +36,7 @@ import { useDispatch } from 'react-redux';
 import { logout } from '../../store/customer/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { allBook } from '../../services/Admin/ApiBook';
+import OrderList from './OrderList';
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -344,7 +345,16 @@ const Dashboard = () => {
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 }`}
                         >
-                            Đơn hàng
+                            Tạo Đơn hàng
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('orders-list')}
+                            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'orders-list'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            Danh Sách Đơn hàng
                         </button>
                         <button
                             onClick={() => setActiveTab('users')}
@@ -365,6 +375,7 @@ const Dashboard = () => {
                     {activeTab === 'dashboard' && renderDashboard()}
                     {activeTab === 'books' && renderBooks()}
                     {activeTab === 'orders' && <OrderManagement />}
+                    {activeTab === 'orders-list' && <OrderList />}
                     {activeTab === 'users' && <UserManagement />}
                 </div>
             </main>
