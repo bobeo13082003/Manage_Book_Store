@@ -83,11 +83,6 @@ const Register = () => {
             </div>
 
             <div className="w-full max-w-md relative z-10">
-                {/* Back to home button */}
-                <Link to="/" className="inline-flex items-center text-white/70 hover:text-white mb-8 group transition-colors">
-                    <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                    Quay về trang chủ
-                </Link>
 
                 <Card className="shadow-2xl border-0 bg-white/10 backdrop-blur-xl">
                     <CardHeader className="text-center pb-6">
@@ -226,16 +221,16 @@ const Register = () => {
                             </Button>
                         </form>
 
-                        <div className="relative mt-8">
+                        {/* <div className="relative mt-8">
                             <div className="absolute inset-0 flex items-center">
                                 <span className="w-full border-t border-white/20" />
                             </div>
                             <div className="relative flex justify-center text-sm uppercase">
                                 <span className="bg-transparent px-4 text-white/60 font-medium">Hoặc đăng ký với</span>
                             </div>
-                        </div>
+                        </div> */}
 
-                        <div className="grid px-6 place-items-center gap-4">
+                        {/* <div className="grid px-6 place-items-center gap-4">
                             <Button variant="outline" className="h-12 border-2 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:border-white/30 backdrop-blur-sm transition-all">
                                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -245,7 +240,7 @@ const Register = () => {
                                 </svg>
                                 Google
                             </Button>
-                        </div>
+                        </div> */}
 
                         <div className="text-center mt-6">
                             <p className="text-white/70">

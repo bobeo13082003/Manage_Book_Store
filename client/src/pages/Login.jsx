@@ -146,6 +146,14 @@ const Login = () => {
                                 >
                                     Đăng Nhập
                                 </Button>
+                                <div className="text-center">
+                                    <p className="text-white/70 text-sm">
+                                        Chưa có tài khoản?{' '}
+                                        <Link to="/register" className="text-blue-300 hover:text-blue-200">
+                                            Đăng ký ngay
+                                        </Link>
+                                    </p>
+                                </div>
                             </form>
                         </CardContent>
                     </Card>

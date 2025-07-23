@@ -95,7 +95,20 @@ const OrderManagement = () => {
     // Xử lý thay đổi item (sách)
     const handleItemChange = (index, field, value) => {
         const newItems = [...formData.items];
-        newItems[index] = { ...newItems[index], [field]: value };
+        const bookId = newItems[index].bookId || '';
+        const selectedBook = books.find(b => b.id === (field === 'bookId' ? value : bookId));
+
+        if (field === 'quantity') {
+            const quantity = parseInt(value);
+            if (selectedBook && quantity > selectedBook.stock) {
+                toast.error(`Số lượng vượt quá tồn kho (${selectedBook.stock})`);
+                return;
+            }
+            newItems[index][field] = quantity;
+        } else {
+            newItems[index][field] = value;
+        }
+
         setFormData(prev => ({ ...prev, items: newItems }));
     };
 
@@ -120,14 +133,6 @@ const OrderManagement = () => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
-
-        // Kiểm tra dữ liệu
-        if (!formData.customerId || !formData.userEmail || !formData.recipient || !formData.phone || !formData.address) {
-            setError('Vui lòng chọn khách hàng và điền đầy đủ thông tin.');
-            toast.error('Vui lòng chọn khách hàng và điền đầy đủ thông tin.');
-            setIsLoading(false);
-            return;
-        }
 
         if (formData.items.length === 0 || formData.items.some(item => !item.bookId || item.quantity <= 0)) {
             setError('Vui lòng chọn ít nhất một sách và số lượng hợp lệ.');
@@ -160,7 +165,6 @@ const OrderManagement = () => {
         }
     };
 
-    console.log(books);
 
     return (
         <div className="space-y-6">
@@ -275,8 +279,8 @@ const OrderManagement = () => {
                                             </SelectTrigger>
                                             <SelectContent className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600">
                                                 {filteredBooks.map(book => (
-                                                    <SelectItem key={book.id} value={book.id}>
-                                                        {book.title} - ₫{book.price.toLocaleString()}
+                                                    <SelectItem key={book.id} value={book.id} disabled={book.stock === 0}>
+                                                        {book.title} - ₫{book.price.toLocaleString()} {book.stock === 0 ? '(Hết hàng)' : `(Còn: ${book.stock})`}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

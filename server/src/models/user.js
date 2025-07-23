@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     },
     phone: String,
     address: String,
-    role: { type: Number, enum: [0, 1], default: 0 },
+    role: { type: Number, enum: [0, 1], default: 1 },
     re_token: String,
     status: { type: String, enum: ["active", "inactive"], default: "inactive" }
 }, {

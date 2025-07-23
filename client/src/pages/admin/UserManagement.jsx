@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, Edit, Trash2, UserPlus, Filter } from 'lucide-react';
+import { Search, Edit, Trash2, UserPlus, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import UserModal from './UserModal';
 import { allUser } from '../../services/Admin/ApiUser';
 import { toast } from 'react-toastify';
@@ -29,9 +29,27 @@ const UserManagement = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit] = useState(5);
+
+
+    const getAllUser = async () => {
+        try {
+            setLoading(true);
+            const res = await allUser();
+            if (res.status === 200) {
+                setUsers(res.data);
+            }
+        } catch (err) {
+            console.error('Error fetching users:', err);
+            toast.error('Không lấy được danh sách người dùng');
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     const filteredUsers = users.filter(user => {
         const matchesSearch =
@@ -44,22 +62,39 @@ const UserManagement = () => {
         return matchesSearch && matchesRole && matchesStatus;
     });
 
+
+    const totalPages = Math.ceil(filteredUsers.length / limit);
+    const paginatedUsers = filteredUsers.slice(
+        (currentPage - 1) * limit,
+        currentPage * limit
+    );
+
+
+    const handlePageChange = (page) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, roleFilter, statusFilter]);
+
+
+    useEffect(() => {
+        getAllUser();
+    }, []);
+
     const handleCreateUser = () => {
         setEditingUser(null);
         setIsModalOpen(true);
-    }
+    };
 
     const handleEditUser = (user) => {
         setEditingUser(user);
         setIsModalOpen(true);
     };
-
-    // const handleDeleteUser = (userId) => {
-    //     if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
-    //         setUsers(users.filter(user => user.id !== userId));
-    //     }
-    // };
-
 
     const getRoleBadge = (role) => {
         return role === 1 ? (
@@ -69,23 +104,6 @@ const UserManagement = () => {
         );
     };
 
-    const getAllUser = async () => {
-        try {
-            const res = await allUser();
-            setUsers(res.data)
-        } catch (err) {
-            console.error(err);
-            toast.error("Không lấy được danh sách người dùng");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-
-        getAllUser();
-    }, []);
-
     const getStatusBadge = (status) => {
         return status === 'active' ? (
             <Badge variant="default">Hoạt động</Badge>
@@ -93,6 +111,7 @@ const UserManagement = () => {
             <Badge variant="destructive">Tạm dừng</Badge>
         );
     };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
@@ -141,45 +160,98 @@ const UserManagement = () => {
                     <CardTitle>Danh sách người dùng ({filteredUsers.length})</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Tên đăng nhập</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Số điện thoại</TableHead>
-                                <TableHead>Địa chỉ</TableHead>
-                                <TableHead>Vai trò</TableHead>
-                                <TableHead>Trạng thái</TableHead>
-                                <TableHead>Ngày tạo</TableHead>
-                                <TableHead>Thao tác</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredUsers.map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell className="font-medium">{user.username}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.phone || 'Chưa Cập Nhật'}</TableCell>
-                                    <TableCell>{user.address || 'Chưa Cập Nhật'}</TableCell>
-                                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                                    <TableCell>{new Date(user.createdAt).toLocaleDateString('vi-VN')}</TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Button onClick={() => handleEditUser(user)} variant="ghost" size="sm">
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                            {/* <Button onClick={() => handleDeleteUser(user.id)} variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button> */}
-                                        </div>
-                                    </TableCell>
+                    {loading ? (
+                        <div className="text-center py-8 text-gray-500">Đang tải...</div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tên đăng nhập</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Số điện thoại</TableHead>
+                                    <TableHead>Địa chỉ</TableHead>
+                                    <TableHead>Vai trò</TableHead>
+                                    <TableHead>Trạng thái</TableHead>
+                                    <TableHead>Ngày tạo</TableHead>
+                                    <TableHead>Thao tác</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedUsers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                                            Không tìm thấy người dùng nào
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    paginatedUsers.map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell className="font-medium">{user.username}</TableCell>
+                                            <TableCell>{user.email}</TableCell>
+                                            <TableCell>{user.phone || 'Chưa Cập Nhật'}</TableCell>
+                                            <TableCell>{user.address || 'Chưa Cập Nhật'}</TableCell>
+                                            <TableCell>{getRoleBadge(user.role)}</TableCell>
+                                            <TableCell>{getStatusBadge(user.status)}</TableCell>
+                                            <TableCell>{new Date(user.createdAt).toLocaleDateString('vi-VN')}</TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button onClick={() => handleEditUser(user)} variant="ghost" size="sm">
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                    {/* <Button onClick={() => handleDeleteUser(user.id)} variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button> */}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                        Trang {currentPage} / {totalPages}
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1 || loading}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                            Trước
+                        </Button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <Button
+                                key={page}
+                                variant={currentPage === page ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handlePageChange(page)}
+                                disabled={loading}
+                            >
+                                {page}
+                            </Button>
+                        ))}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages || loading}
+                        >
+                            Sau
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             <UserModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

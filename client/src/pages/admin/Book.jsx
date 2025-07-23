@@ -47,6 +47,8 @@ const BookManagement = ({ book, isOpen, onClose, onSave, getAllBook }) => {
             } catch (err) {
                 setError('Không thể tải danh sách danh mục.');
                 toast.error('Không thể tải danh sách danh mục.');
+                console.log(err);
+
             } finally {
                 setIsLoading(false);
             }
@@ -54,16 +56,9 @@ const BookManagement = ({ book, isOpen, onClose, onSave, getAllBook }) => {
         fetchCategories();
 
     }, []);
-    console.log(book);
-    console.log(categories);
-
 
     useEffect(() => {
-        console.log('book:', book); // Ghi log toàn bộ book
         if (book) {
-            console.log('book:', book); // Ghi log toàn bộ book
-            console.log('book.category:', book.category); // Ghi log cụ thể book.category
-
             const initialcoverUrl = Array.isArray(book.coverUrl) ? book.coverUrl.map(item => item.url || item) : [];
             setFormData({
                 title: book.title || '',
